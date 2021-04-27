@@ -29,6 +29,7 @@ In a work directory of your choosing
 - cmake ../
 - make clean; make
 - sudo make install
+- (restart INDI)
 
 NOTES:
 - First you need to set the authentication parameters under the 'Options' tab
