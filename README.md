@@ -1,4 +1,4 @@
-# KOBSWeather
+# DLI Digiswitch
 INDI DLI switch driver
 
 DEPENDENCIES:
