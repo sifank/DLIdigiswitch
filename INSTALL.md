@@ -11,16 +11,15 @@ indi libraries yourself using instructions from the INDI website. To compile
 the driver you will need also: cmake, libindi-dev, and git (maybe more, do let me
 what other dependencies you find - I'll update the list)
 
-The driver is only compatible with firmware version 3.1.0 or higher. Please update the firmware for the Azimuth & Shutter controllers before using this driver.
+The driver is only compatible with firmware version 3.1.0 or higher.
 
-INDI NexDome driver is released as a 3rd party driver in source and binary packages. It is compatible with libindi >= v1.8.2
+INDI DLI digiswitch driver is released as a in source and binary packages. It is compatible with libindi >= v1.8.2
 
-Under Ubuntu, you can install the driver via:
+DEPENDENCIES:
 
-sudo add-apt-repository ppa:mutlaqja/ppa
-
-(To be completed)
-
+- sudo apt install build-essential devscripts debhelper fakeroot cdbs software-properties-common cmake pkg-config libmysqlclient-dev
+- sudo add-apt-repository ppa:mutlaqja/ppa 
+- sudo apt install libindi-dev libnova-dev libz-dev libgsl-dev
 
 	
 Installation
@@ -50,5 +49,5 @@ To fix:
    1) (example on my Raspberry Pi):  sudo ln -s /usr/lib/x86_64-linux-gnu/libindidriver.so  libindidriver.so)
 5) You can then rerun from the make step onwards
 
-That's it - you'll have the Beaver driver listed in the Dome section
+That's it - you'll have the DLI Digiswitch driver listed in the Auxiliary section
 ... and you can remove the "build" folder.
