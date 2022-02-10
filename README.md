@@ -48,45 +48,27 @@ If you're using KStars, the drivers will be automatically listed in KStars' Devi
 Before you Start
 ================
 
-- Shutter controls will not show unless the rotator unit is in communication with the shutter unit.
-  - This can take up to 20 secs after turning on the shutter
-- Under the Slaving tab: you need to set the parameters for your dome:
-  - (Reference the Slaving Tab below)
-- Set the Park and Home positions
-  - (Reference the Site Management Tab below)
-- Initialize the rotator and shutter
-  - (Reference both the Rotator and Shutter tabs)
-- Do monitor the shutter battery field (see Main tab)
+- 
 
 OPERATIONS
 ==========
 
-Connection Tab
---------------
+Options Tab
+-----------
 
-![Connection Tab](Assets/ConnectionsTab.png)
+![Options Tab](Assets/OptionsTab-initial.jpeg)
 
-You can connect to the Beaver controller via Serial (USB) or Network
+You can enable or disable automatic shutter opening and closing when dome goes to into or out of the Park position. After changing these settings, click 'Save configuration' button to save the driver settings.
 
-USB:
-- Look for Silicon_Labs_CP2102N_USB_to_UART_Bridge_Controller_d88d70e0fd44eb11ad70aa52b003b68c-if00-port0 
-  - idVendor=10c4, idProduct=ea60 (On linux run: lsusb)
-- BaudRate 115200
+Mount Policy: Mount policy can be either set to Ignore Telescope (default) or Telescope Locks. When the policy is set to Ignore Telescope then the dome can park/unpark regardless of the mount parking state. When it is set Telescope locks, this disallows the dome from parking when telescope is unparked.  This might be important if you telescope has to be parked so as not to interfere with the dome parking.
 
-Network:
-- I am having a problem connecting to the controller, so this is not tested.  Let me know if this works for you.
-- Currently you would have to use the Window's [Beaver software utility](https://www.nexdome.com/resources) tool to set the controlers IP address.
-- Port should be 10000
-- Connection type is UDP
+![Options Tab](Assets/OptionsTab-authenticated.jpeg)
 
-The INDI driver version is listed under Driver Info (that's this software)
-
-Beaver controller's firmware version is listed on the Beaver line.
 
 Main Tab
 --------
 
-![Main Tab](Assets/MainTab.png)
+![Main Tab](Assets/MainTab.jpeg)
 
 Shutter Open/Close will only show up if the Shutter controller is up and communicating with the Rotator controller.
 
@@ -99,14 +81,10 @@ Dome and Shutter Status fields will display any errors, idle, moving, etc.
 The Shutter Volts field displays the current voltage of the shutter battery.  In combination with the Safe Voltage on the Shutter tab, this can trigger the rotator controller to go into safety mode and call for the shutter to close.
 - Shutter Volts and Status fields will not show if the shutter controller is off or not in communication.
 
-Options Tab
------------
+General Info Tab
+----------------
 
-![Options Tab](Assets/OptionsTab.png)
-
-You can enable or disable automatic shutter opening and closing when dome goes to into or out of the Park position. After changing these settings, click 'Save configuration' button to save the driver settings.
-
-Mount Policy: Mount policy can be either set to Ignore Telescope (default) or Telescope Locks. When the policy is set to Ignore Telescope then the dome can park/unpark regardless of the mount parking state. When it is set Telescope locks, this disallows the dome from parking when telescope is unparked.  This might be important if you telescope has to be parked so as not to interfere with the dome parking.
+![General Info Tab](Assets/GeneralInfoTab.jpeg)
 
 
 ISSUES
