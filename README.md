@@ -31,7 +31,8 @@ FEATURES
 ========
 - Control the power (on/off) for the 8 ports
 - Cycle the power of a port (if it's turned on)
-- Name ports
+- (Re)Name ports
+- Power everything on or off
 
 How to Use
 ==========
