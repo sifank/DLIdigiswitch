@@ -19,7 +19,7 @@ Under Ubuntu, you can install the driver via:
 
 sudo add-apt-repository ppa:mutlaqja/ppa
 
-To be entered ...
+(To be completed)
 
 
 	
@@ -31,7 +31,7 @@ In a working directory of your choosing:
 2) $ cd DLIdigiswitch
 3) $ mkdir build
 4) $ cd build
-5) $ cmake -DCMAKE_INSTALL_PREFIX=/usr . ../
+5) $ cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ../
 6) $ make
 7) $ sudo make install
 
