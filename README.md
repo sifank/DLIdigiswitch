@@ -101,6 +101,7 @@ General Info Tab
 ![General Info Tab](Assets/GeneralInfoTab.jpeg)
 
 Driver Info/Version is the version of this INDI driver
+
 DLI Version is the firmware version reported by the Digiswitch
 
 
