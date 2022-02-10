@@ -11,8 +11,6 @@ This package provides the INDI driver for DLI's Digiswitch (Web Switch Pro):
 - Simple web UI, or write your own script or program
 - AutoPing feature to reliably reboot routers or APs 
 
-The driver is compatible with Beaver firmware version 1.1.1 or higher.
-
 The DLI Digiswitch driver is compatible with libindi >= v1.8.2
 
 NOTES
