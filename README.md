@@ -2,23 +2,25 @@
 INDI DLI switch driver
 
 
-
-
-Lunatico NexDome Beaver INDI Driver
+DLI Digiswitch INDI Driver
 =========================================
-This package provides the INDI driver for Lunatico NexDome Beaver controller.
-
-NexDome is a classic observatory dome with more than 100 degrees of shutter opening, allowing you to point your telescope to the zenith while remaining shielded from stray light and wind. The 2.2 meter inside diameter provides plenty of space to operate up to a 14” Schmidt Cass or a refractor 1400mm long.
+This package provides the INDI driver for DLI's Digiswitch (Web Switch Pro):
+- Rugged, reliable power control over the web. Industrial quality, 15A
+- Secure web server with SSL, SSH, HTTPS, SNMP, REST API, MODBUS
+- Amazon Echo/Alexis compatible
+- Simple web UI, or write your own script or program
+- AutoPing feature to reliably reboot routers or APs 
 
 The driver is compatible with Beaver firmware version 1.1.1 or higher.
 
-INDI NexDome Beaver driver is compatible with libindi >= v1.8.2
+The DLI Digiswitch driver is compatible with libindi >= v1.8.2
 
 NOTES
 =====
-- First you need to set the authentication parameters under the 'Options' tab
-  - These need to match what you setup in the DLI switch
-- There is a slight delay between setting a switch and the indicator light
+
+- You need to setup the hostname and authentication in the Digiswitch before running this driver
+- Initial power settings (when the Digiswitch is powered on) needs to be set in the Digiswitch
+- Cycle time needs to be set in the Digiswitch
 
 *Read the Release Notes*
 
@@ -28,7 +30,9 @@ INSTALL
 
 FEATURES
 ========
-
+- Control the power (on/off) for the 8 ports
+- Cycle the power of a port (if it's turned on)
+- Name ports
 
 How to Use
 ==========
@@ -48,21 +52,36 @@ If you're using KStars, the drivers will be automatically listed in KStars' Devi
 Before you Start
 ================
 
-- 
+- You need to set the authentication parameters (user, password, hostname) under the 'Options' tab
+  - These need to match what you setup in the DLI switch
+  - After authentication, click on 'Connect' under the Main Tab
+- Once successfully authenticated to the DLI switch, you can set the port names
+- There is a slight delay between setting a switch and the indicator light
+- (Add notes for DLI configuration)
 
 OPERATIONS
 ==========
 
-Options Tab
+Options Tab (Unauthenticated)
 -----------
 
 ![Options Tab](Assets/OptionsTab-initial.jpeg)
 
-You can enable or disable automatic shutter opening and closing when dome goes to into or out of the Park position. After changing these settings, click 'Save configuration' button to save the driver settings.
+First time access, you will need to set the user name, password and hostname of the DLI digiswitch.  
 
-Mount Policy: Mount policy can be either set to Ignore Telescope (default) or Telescope Locks. When the policy is set to Ignore Telescope then the dome can park/unpark regardless of the mount parking state. When it is set Telescope locks, this disallows the dome from parking when telescope is unparked.  This might be important if you telescope has to be parked so as not to interfere with the dome parking.
+NOTE: you will need to click on the 'Connect' button on the Main Tab to continue.
+
+Once authenticaled, the authentication fields will disappear and the port names fields will appear.
+
+
+Options Tab (Authenticated)
+-----------
 
 ![Options Tab](Assets/OptionsTab-authenticated.jpeg)
+
+After authenticating and connecting, the Options Tab will allow you to name/rename the ports.  This will rename them in the Digiswitch as well.
+
+When the driver is started, it will retrieve these names from the Digiswitch.
 
 
 Main Tab
@@ -70,21 +89,19 @@ Main Tab
 
 ![Main Tab](Assets/MainTab.jpeg)
 
-Shutter Open/Close will only show up if the Shutter controller is up and communicating with the Rotator controller.
+The Main Tab allows you to connect/disconnect from the Digiswitch as well as turn the ports on or off, or cycle the port if it is on.
 
-Move Relative buttons are meant to start/stop motion.  However, instead they move the dome by the amount set by the relative amount set in t he field above.  As a result, you need to press the CW or CCW button twice (once to start, once to stop).
+The cycle time will be whatever is set in the Digiswitch.
 
-Absolute Position will move the dome AZ relative to what you set the Home Offset to, which if set according to the instruction in the Rotator Tab, this will be from true north.
-
-Dome and Shutter Status fields will display any errors, idle, moving, etc.
-
-The Shutter Volts field displays the current voltage of the shutter battery.  In combination with the Safe Voltage on the Shutter tab, this can trigger the rotator controller to go into safety mode and call for the shutter to close.
-- Shutter Volts and Status fields will not show if the shutter controller is off or not in communication.
+This also allows you to turn all port on or off.
 
 General Info Tab
 ----------------
 
 ![General Info Tab](Assets/GeneralInfoTab.jpeg)
+
+Driver Info/Version is the version of this INDI driver
+DLI Version is the firmware version reported by the Digiswitch
 
 
 ISSUES
