@@ -19,6 +19,7 @@ NOTES
 - You need to setup the hostname and authentication in the Digiswitch before running this driver
 - Initial power settings (when the Digiswitch is powered on) needs to be set in the Digiswitch
 - Cycle time needs to be set in the Digiswitch
+- Optionally you can set the port names as well (these can be changed with this INDI driver)
 
 *Read the Release Notes*
 
