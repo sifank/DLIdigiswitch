@@ -13,13 +13,20 @@ This package provides the INDI driver for DLI's Digiswitch (Web Switch Pro):
 
 The DLI Digiswitch driver is compatible with libindi >= v1.8.2
 
-NOTES
-=====
+Setup the Digiswitch
+====================
 
-- You need to setup the hostname and authentication in the Digiswitch before running this driver
-- Initial power settings (when the Digiswitch is powered on) needs to be set in the Digiswitch
-- Cycle time needs to be set in the Digiswitch
-- Optionally you can set the port names as well (these can be changed with this INDI driver)
+- Log into the Digiswitch and set:
+  - 'Setup': fill out 'LAN Configuration and General Network Settings'
+  - 'Setup': fill out 'Administrator credentials'
+  - 'Setup/Access':  check 'Allow legacy state-changing GET requests'
+  - 'External APIs': check 'Allow REST-style API'
+  - 'External APIs/UPnP outlet binding configuration': check all the ports you want this driver to control
+
+- Optionally:
+  - 'Setup/Power Loss Recovery Mode': set the recovery mode
+  - 'Setup/Unit Names': set the ports names (this can be changed in this driver)
+  - 'Setup/Delay': set the cycle delay time (this can be changed in this driver)
 
 *Read the Release Notes*
 
@@ -52,12 +59,11 @@ If you're using KStars, the drivers will be automatically listed in KStars' Devi
 Before you Start
 ================
 
-- You need to set the authentication parameters (user, password, hostname) under the 'Options' tab
+- Set the authentication parameters (user, password, hostname) under the 'Options' tab
   - These need to match what you setup in the DLI switch
   - After authentication, click on 'Connect' under the Main Tab
 - Once successfully authenticated to the DLI switch, you can set the port names
 - There is a slight delay between setting a switch and the indicator light
-- (Add notes for DLI configuration)
 
 OPERATIONS
 ==========
