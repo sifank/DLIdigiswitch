@@ -49,7 +49,7 @@ bool DLIsw::Connect()
     string version;
     if(switchVersion(version)) {
         VersionTP[0].setText(version);
-        LOGF_INFO("DLI switch version: %s", version.c_str());
+        DEBUGF(INDI::Logger::DBG_SESSION, "DLI switch version: %s", version.c_str());
 
         SetTimer(POLLMS);
         string version;
@@ -58,6 +58,7 @@ bool DLIsw::Connect()
     }
     else {
         defineText(&AuthsTP);
+        DEBUG(INDI::Logger::DBG_WARNING, "Not authenticated, see Options Tab");
         return false;
     }
 }
@@ -106,18 +107,10 @@ bool DLIsw::initProperties()
     //MAIN Tab
     ////////////////
 
-    // ALERT need to set the portlabels either from getProperties or from the device
-    //       but, the auth fiels are not updated yet ...
-    for (int i=0; i < POWER_N; i++) {
-        string sName;
-        switchGetName(i, sName);
-        PortLabelsTP[i].setText(sName.c_str());
-    }
-
     bool sStatus = false;
     // Port 1
     if(!DLIsw::switchStatus(OUT1, sStatus))
-        LOG_ERROR("Problem getting status");
+        DEBUG(INDI::Logger::DBG_ERROR, "Problem getting status");
     PortControl1SP[DON].fill("P1ON", "On", sStatus ? ISS_ON : ISS_OFF);
     PortControl1SP[DOFF].fill("P1OFF", "Off", sStatus ? ISS_OFF : ISS_ON);
     PortControl1SP[DCYCLE].fill("P1CYCLE", "Cycle", ISS_OFF);
@@ -125,7 +118,7 @@ bool DLIsw::initProperties()
 
     // Port 2
     if(!DLIsw::switchStatus(OUT2, sStatus))
-        LOG_ERROR("Problem getting status");
+        DEBUG(INDI::Logger::DBG_ERROR, "Problem getting status");
     PortControl2SP[DON].fill("P2ON", "On", sStatus ? ISS_ON : ISS_OFF);
     PortControl2SP[DOFF].fill("P2OFF", "Off", sStatus ? ISS_OFF : ISS_ON);
     PortControl2SP[DCYCLE].fill("P2CYCLE", "Cycle", ISS_OFF);
@@ -133,7 +126,7 @@ bool DLIsw::initProperties()
 
     // Port 3
     if(!DLIsw::switchStatus(OUT3, sStatus))
-        LOG_ERROR("Problem getting status");
+        DEBUG(INDI::Logger::DBG_ERROR, "Problem getting status");
     PortControl3SP[DON].fill("P3ON", "On", sStatus ? ISS_ON : ISS_OFF);
     PortControl3SP[DOFF].fill("P3OFF", "Off", sStatus ? ISS_OFF : ISS_ON);
     PortControl3SP[DCYCLE].fill("P3CYCLE", "Cycle", ISS_OFF);
@@ -141,7 +134,7 @@ bool DLIsw::initProperties()
 
     // Port 4
     if(!DLIsw::switchStatus(OUT4, sStatus))
-        LOG_ERROR("Problem getting status");
+        DEBUG(INDI::Logger::DBG_ERROR, "Problem getting status");
     PortControl4SP[DON].fill("P4ON", "On", sStatus ? ISS_ON : ISS_OFF);
     PortControl4SP[DOFF].fill("P4OFF", "Off", sStatus ? ISS_OFF : ISS_ON);
     PortControl4SP[DCYCLE].fill("P4CYCLE", "Cycle", ISS_OFF);
@@ -149,7 +142,7 @@ bool DLIsw::initProperties()
 
     // Port 5
     if(!DLIsw::switchStatus(OUT5, sStatus))
-        LOG_ERROR("Problem getting status");
+        DEBUG(INDI::Logger::DBG_ERROR, "Problem getting status");
     PortControl5SP[DON].fill("P5ON", "On", sStatus ? ISS_ON : ISS_OFF);
     PortControl5SP[DOFF].fill("P5OFF", "Off", sStatus ? ISS_OFF : ISS_ON);
     PortControl5SP[DCYCLE].fill("P5CYCLE", "Cycle", ISS_OFF);
@@ -157,7 +150,7 @@ bool DLIsw::initProperties()
 
     // Port 6
     if(!DLIsw::switchStatus(OUT6, sStatus))
-        LOG_ERROR("Problem getting status");
+        DEBUG(INDI::Logger::DBG_ERROR, "Problem getting status");
     PortControl6SP[DON].fill("P6ON", "On", sStatus ? ISS_ON : ISS_OFF);
     PortControl6SP[DOFF].fill("P6OFF", "Off", sStatus ? ISS_OFF : ISS_ON);
     PortControl6SP[DCYCLE].fill("P6CYCLE", "Cycle", ISS_OFF);
@@ -165,7 +158,7 @@ bool DLIsw::initProperties()
 
     // Port 7
     if(!DLIsw::switchStatus(OUT7, sStatus))
-        LOG_ERROR("Problem getting status");
+        DEBUG(INDI::Logger::DBG_ERROR, "Problem getting status");
     PortControl7SP[DON].fill("P7ON", "On", sStatus ? ISS_ON : ISS_OFF);
     PortControl7SP[DOFF].fill("P7OFF", "Off", sStatus ? ISS_OFF : ISS_ON);
     PortControl7SP[DCYCLE].fill("P7CYCLE", "Cycle", ISS_OFF);
@@ -173,7 +166,7 @@ bool DLIsw::initProperties()
 
     // Port 8
     if(!DLIsw::switchStatus(OUT8, sStatus))
-        LOG_ERROR("Problem getting status");
+        DEBUG(INDI::Logger::DBG_ERROR, "Problem getting status");
     PortControl8SP[DON].fill("P8ON", "On", sStatus ? ISS_ON : ISS_OFF);
     PortControl8SP[DOFF].fill("P8OFF", "Off", sStatus ? ISS_OFF : ISS_ON);
     PortControl8SP[DCYCLE].fill("P8CYCLE", "Cycle", ISS_OFF);
@@ -200,11 +193,30 @@ bool DLIsw::initProperties()
 ///////////////////////////////////////////////////////////////
 bool DLIsw::updateProperties()
 {
+
     // Call parent update properties first
     INDI::DefaultDevice::updateProperties();
 
-    if (isConnected())
-    {
+    if (isConnected()) {
+
+        if (testConfig()) {
+            for (int i=0; i < POWER_N; i++) {
+                string sName;
+                switchGetName(i, sName);
+                PortLabelsTP[i].setText(sName.c_str());
+            }
+
+            PortControl1SP.fill(getDeviceName(), "PORT_1", PortLabelsTP[OUT1].getText(), MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_OK);
+            PortControl2SP.fill(getDeviceName(), "PORT_2", PortLabelsTP[OUT2].getText(), MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_OK);
+            PortControl3SP.fill(getDeviceName(), "PORT_3", PortLabelsTP[OUT3].getText(), MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_OK);
+            PortControl4SP.fill(getDeviceName(), "PORT_4", PortLabelsTP[OUT4].getText(), MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_OK);
+            PortControl5SP.fill(getDeviceName(), "PORT_5", PortLabelsTP[OUT5].getText(), MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_OK);
+            PortControl6SP.fill(getDeviceName(), "PORT_6", PortLabelsTP[OUT6].getText(), MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_OK);
+            PortControl7SP.fill(getDeviceName(), "PORT_7", PortLabelsTP[OUT7].getText(), MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_OK);
+            PortControl8SP.fill(getDeviceName(), "PORT_8", PortLabelsTP[OUT8].getText(), MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_OK);
+        }
+
+
         // We're connected, paint the tabs
         defineText(&VersionTP);
         defineSwitch(&PortControl1SP);
@@ -254,15 +266,15 @@ bool DLIsw::ISNewSwitch (const char *dev, const char *name, ISState *states, cha
             PortControl1SP.update(states, names, n);
             if (PortControl1SP[DON].getState() == ISS_ON) {
                 if (!DLIsw::switchControl(OUT1, DON))
-                    LOG_ERROR("Could not turn port 7 on");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 7 on");
             }
             else if (PortControl1SP[DOFF].getState() == ISS_ON) {
                 if (!DLIsw::switchControl(OUT1, DOFF))
-                    LOG_ERROR("Could not turn port 7 off");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 7 off");
             }
             else if (PortControl1SP[DCYCLE].getState() == ISS_ON) {
                 if (!DLIsw::switchCycle(OUT1)) {
-                    LOG_ERROR("Could not cycle port 7");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not cycle port 7");
                 }
                 PortControl1SP[DOFF].setState(ISS_ON);
                 PortControl1SP[DCYCLE].setState(ISS_OFF);
@@ -278,15 +290,15 @@ bool DLIsw::ISNewSwitch (const char *dev, const char *name, ISState *states, cha
             PortControl2SP.update(states, names, n);
             if (PortControl2SP[DON].getState() == ISS_ON) {
                 if (!DLIsw::switchControl(OUT2, DON))
-                    LOG_ERROR("Could not turn port 7 on");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 7 on");
             }
             else if (PortControl2SP[DOFF].getState() == ISS_ON) {
                 if (!DLIsw::switchControl(OUT2, DOFF))
-                    LOG_ERROR("Could not turn port 7 off");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 7 off");
             }
             else if (PortControl2SP[DCYCLE].getState() == ISS_ON) {
                 if (!DLIsw::switchCycle(OUT2)) {
-                    LOG_ERROR("Could not cycle port 7");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not cycle port 7");
                 }
                 PortControl2SP[DOFF].setState(ISS_ON);
                 PortControl2SP[DCYCLE].setState(ISS_OFF);
@@ -302,15 +314,15 @@ bool DLIsw::ISNewSwitch (const char *dev, const char *name, ISState *states, cha
             PortControl3SP.update(states, names, n);
             if (PortControl3SP[DON].getState() == ISS_ON) {
                 if (!DLIsw::switchControl(OUT3, DON))
-                    LOG_ERROR("Could not turn port 7 on");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 7 on");
             }
             else if (PortControl3SP[DOFF].getState() == ISS_ON) {
                 if (!DLIsw::switchControl(OUT3, DOFF))
-                    LOG_ERROR("Could not turn port 7 off");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 7 off");
             }
             else if (PortControl3SP[DCYCLE].getState() == ISS_ON) {
                 if (!DLIsw::switchCycle(OUT3)) {
-                    LOG_ERROR("Could not cycle port 7");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not cycle port 7");
                 }
                 PortControl3SP[DOFF].setState(ISS_ON);
                 PortControl3SP[DCYCLE].setState(ISS_OFF);
@@ -326,15 +338,15 @@ bool DLIsw::ISNewSwitch (const char *dev, const char *name, ISState *states, cha
             PortControl4SP.update(states, names, n);
             if (PortControl4SP[DON].getState() == ISS_ON) {
                 if (!DLIsw::switchControl(OUT4, DON))
-                    LOG_ERROR("Could not turn port 7 on");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 7 on");
             }
             else if (PortControl4SP[DOFF].getState() == ISS_ON) {
                 if (!DLIsw::switchControl(OUT4, DOFF))
-                    LOG_ERROR("Could not turn port 7 off");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 7 off");
             }
             else if (PortControl4SP[DCYCLE].getState() == ISS_ON) {
                 if (!DLIsw::switchCycle(OUT4)) {
-                    LOG_ERROR("Could not cycle port 7");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not cycle port 7");
                 }
                 PortControl4SP[DOFF].setState(ISS_ON);
                 PortControl4SP[DCYCLE].setState(ISS_OFF);
@@ -350,15 +362,15 @@ bool DLIsw::ISNewSwitch (const char *dev, const char *name, ISState *states, cha
             PortControl5SP.update(states, names, n);
             if (PortControl5SP[DON].getState() == ISS_ON) {
                 if (!DLIsw::switchControl(OUT5, DON))
-                    LOG_ERROR("Could not turn port 7 on");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 7 on");
             }
             else if (PortControl5SP[DOFF].getState() == ISS_ON) {
                 if (!DLIsw::switchControl(OUT5, DOFF))
-                    LOG_ERROR("Could not turn port 7 off");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 7 off");
             }
             else if (PortControl5SP[DCYCLE].getState() == ISS_ON) {
                 if (!DLIsw::switchCycle(OUT5)) {
-                    LOG_ERROR("Could not cycle port 7");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not cycle port 7");
                 }
                 PortControl5SP[DOFF].setState(ISS_ON);
                 PortControl5SP[DCYCLE].setState(ISS_OFF);
@@ -374,15 +386,15 @@ bool DLIsw::ISNewSwitch (const char *dev, const char *name, ISState *states, cha
             PortControl6SP.update(states, names, n);
             if (PortControl6SP[DON].getState() == ISS_ON) {
                 if (!DLIsw::switchControl(OUT6, DON))
-                    LOG_ERROR("Could not turn port 7 on");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 7 on");
             }
             else if (PortControl6SP[DOFF].getState() == ISS_ON) {
                 if (!DLIsw::switchControl(OUT6, DOFF))
-                    LOG_ERROR("Could not turn port 7 off");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 7 off");
             }
             else if (PortControl6SP[DCYCLE].getState() == ISS_ON) {
                 if (!DLIsw::switchCycle(OUT6)) {
-                    LOG_ERROR("Could not cycle port 7");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not cycle port 7");
                 }
                 PortControl6SP[DOFF].setState(ISS_ON);
                 PortControl6SP[DCYCLE].setState(ISS_OFF);
@@ -398,15 +410,15 @@ bool DLIsw::ISNewSwitch (const char *dev, const char *name, ISState *states, cha
             PortControl7SP.update(states, names, n);
             if (PortControl7SP[DON].getState() == ISS_ON) {
                 if (!DLIsw::switchControl(OUT7, DON))
-                    LOG_ERROR("Could not turn port 7 on");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 7 on");
             }
             else if (PortControl7SP[DOFF].getState() == ISS_ON) {
                 if (!DLIsw::switchControl(OUT7, DOFF))
-                    LOG_ERROR("Could not turn port 7 off");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 7 off");
             }
             else if (PortControl7SP[DCYCLE].getState() == ISS_ON) {
                 if (!DLIsw::switchCycle(OUT7)) {
-                    LOG_ERROR("Could not cycle port 7");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not cycle port 7");
                 }
                 PortControl7SP[DOFF].setState(ISS_ON);
                 PortControl7SP[DCYCLE].setState(ISS_OFF);
@@ -422,15 +434,15 @@ bool DLIsw::ISNewSwitch (const char *dev, const char *name, ISState *states, cha
             PortControl8SP.update(states, names, n);
             if (PortControl8SP[DON].getState() == ISS_ON) {
                 if (!DLIsw::switchControl(OUT8, DON))
-                    LOG_ERROR("Could not turn port 8 on");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 8 on");
             }
             else if (PortControl8SP[DOFF].getState() == ISS_ON) {
                 if (!DLIsw::switchControl(OUT8, DOFF))
-                    LOG_ERROR("Could not turn port 8 off");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 8 off");
             }
             else if (PortControl8SP[DCYCLE].getState() == ISS_ON) {
                 if (!DLIsw::switchCycle(OUT8)) {
-                    LOG_ERROR("Could not cycle port 8");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not cycle port 8");
                 }
                 PortControl8SP[DOFF].setState(ISS_ON);
                 PortControl8SP[DCYCLE].setState(ISS_OFF);
@@ -456,42 +468,42 @@ bool DLIsw::ISNewSwitch (const char *dev, const char *name, ISState *states, cha
                 if (DLIsw::switchControl(OUT1, DON))
                     PortControl1SP[DON].setState(ISS_ON);
                 else
-                    LOG_ERROR("Could not turn port 1 on");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 1 on");
 
                 if (DLIsw::switchControl(OUT2, DON))
                     PortControl2SP[DON].setState(ISS_ON);
                 else
-                    LOG_ERROR("Could not turn port 2 on");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 2 on");
 
                 if (DLIsw::switchControl(OUT3, DON))
                     PortControl3SP[DON].setState(ISS_ON);
                 else
-                    LOG_ERROR("Could not turn port 3 on");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 3 on");
 
                 if (DLIsw::switchControl(OUT4, DON))
                     PortControl4SP[DON].setState(ISS_ON);
                 else
-                    LOG_ERROR("Could not turn port 4 on");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 4 on");
 
                 if (DLIsw::switchControl(OUT5, DON))
                     PortControl5SP[DON].setState(ISS_ON);
                 else
-                    LOG_ERROR("Could not turn port 5 on");
+                    DEBUG(INDI::Logger::DBG_ERROR,"Could not turn port 5 on");
 
                 if (DLIsw::switchControl(OUT6, DON))
                     PortControl6SP[DON].setState(ISS_ON);
                 else
-                    LOG_ERROR("Could not turn port 6 on");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 6 on");
 
                 if (DLIsw::switchControl(OUT7, DON))
                     PortControl7SP[DON].setState(ISS_ON);
                 else
-                    LOG_ERROR("Could not turn port 7 on");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 7 on");
 
                 if (DLIsw::switchControl(OUT8, DON))
                     PortControl8SP[DON].setState(ISS_ON);
                 else
-                    LOG_ERROR("Could not turn port 8 on");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 8 on");
 
                 AllSP[DON].setState(ISS_ON);
                 AllSP[DOFF].setState(ISS_OFF);
@@ -504,42 +516,42 @@ bool DLIsw::ISNewSwitch (const char *dev, const char *name, ISState *states, cha
                 if (DLIsw::switchControl(OUT1, DOFF))
                     PortControl1SP[DOFF].setState(ISS_ON);
                 else
-                    LOG_ERROR("Could not turn port 1 off");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 1 off");
 
                 if (DLIsw::switchControl(OUT2, DOFF))
                     PortControl2SP[DOFF].setState(ISS_ON);
                 else
-                    LOG_ERROR("Could not turn port 2 off");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 2 off");
 
                 if (DLIsw::switchControl(OUT3, DOFF))
                     PortControl3SP[DOFF].setState(ISS_ON);
                 else
-                    LOG_ERROR("Could not turn port 3 off");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 3 off");
 
                 if (DLIsw::switchControl(OUT4, DOFF))
                     PortControl4SP[DOFF].setState(ISS_ON);
                 else
-                    LOG_ERROR("Could not turn port 4 off");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 4 off");
 
                 if (DLIsw::switchControl(OUT5, DOFF))
                     PortControl5SP[DOFF].setState(ISS_ON);
                 else
-                    LOG_ERROR("Could not turn port 5 off");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 5 off");
 
                 if (DLIsw::switchControl(OUT6, DOFF))
                     PortControl6SP[DOFF].setState(ISS_ON);
                 else
-                    LOG_ERROR("Could not turn port 6 off");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 6 off");
 
                 if (DLIsw::switchControl(OUT7, DOFF))
                     PortControl7SP[DOFF].setState(ISS_ON);
                 else
-                    LOG_ERROR("Could not turn port 7 off");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 7 off");
 
                 if (DLIsw::switchControl(OUT8, DOFF))
                     PortControl8SP[DOFF].setState(ISS_ON);
                 else
-                    LOG_ERROR("Could not turn port 8 off");
+                    DEBUG(INDI::Logger::DBG_ERROR, "Could not turn port 8 off");
 
                 
                 AllSP[DOFF].setState(ISS_ON);
@@ -565,7 +577,7 @@ bool DLIsw::ISNewText (const char *dev, const char *name, char *texts[], char *n
         {
             PortLabelsTP.update(texts, names, n);
             if (!switchSetNames()) {
-                LOG_ERROR("Problem setting names");
+                DEBUG(INDI::Logger::DBG_ERROR, "Problem setting names");
             }
             PortLabelsTP.setState(IPS_OK);
             PortLabelsTP.apply();
@@ -581,16 +593,15 @@ bool DLIsw::ISNewText (const char *dev, const char *name, char *texts[], char *n
             if (!testConfig()) {
                 AuthsTP.setState(IPS_ALERT);
                 AuthsTP.apply();
-                LOG_ERROR("You need to click 'Connect' on the Main Tab to continue");
+                DEBUG(INDI::Logger::DBG_ERROR, "Authorization not accepted, try again");
             }
             else {
-                for (int i=0; i < POWER_N; i++) {
-                    string sName;
-                    switchGetName(i, sName);
-                    PortLabelsTP[i].setText(sName.c_str());
-                }
-                // ALERT if this was just set, need to tell user to click Connect on Main Tab
                 saveConfig();
+                DEBUG(INDI::Logger::DBG_WARNING, "You need to click Connect on the Main Tab to continue");
+
+                // auto Connect() not working
+                //INDI::DefaultDevice::Connect();
+
                 // for security reasons, remove the auth fields if successful
                 deleteProperty(AuthsTP.getName());
             }
@@ -609,7 +620,7 @@ void DLIsw::TimerHit()
 
     // If auth is not set, set all switches blank
     if(!testConfig()) {
-        LOG_ERROR("Auth not set, resetting port status to off");
+        DEBUG(INDI::Logger::DBG_ERROR, "Auth not set, resetting port status to off");
         for (int i=0; i < POWER_N; i++) {
             PortControl1SP[i].setState(ISS_OFF);
             PortControl2SP[i].setState(ISS_OFF);
@@ -631,49 +642,49 @@ void DLIsw::TimerHit()
     // update switch status
     bool sStatus = false;
     if(!DLIsw::switchStatus(OUT1, sStatus))
-        LOG_ERROR("Problem getting status");
+        DEBUG(INDI::Logger::DBG_ERROR, "Problem getting status");
     PortControl1SP[DON].setState(sStatus ? ISS_ON : ISS_OFF);
     PortControl1SP[DOFF].setState(sStatus ? ISS_OFF : ISS_ON);
     PortControl1SP.apply();
 
     if(!DLIsw::switchStatus(OUT2, sStatus))
-        LOG_ERROR("Problem getting status");
+        DEBUG(INDI::Logger::DBG_ERROR, "Problem getting status");
     PortControl2SP[DON].setState(sStatus ? ISS_ON : ISS_OFF);
     PortControl2SP[DOFF].setState(sStatus ? ISS_OFF : ISS_ON);
     PortControl2SP.apply();
 
     if(!DLIsw::switchStatus(OUT3, sStatus))
-        LOG_ERROR("Problem getting status");
+        DEBUG(INDI::Logger::DBG_ERROR, "Problem getting status");
     PortControl3SP[DON].setState(sStatus ? ISS_ON : ISS_OFF);
     PortControl3SP[DOFF].setState(sStatus ? ISS_OFF : ISS_ON);
     PortControl3SP.apply();
 
     if(!DLIsw::switchStatus(OUT4, sStatus))
-        LOG_ERROR("Problem getting status");
+        DEBUG(INDI::Logger::DBG_ERROR, "Problem getting status");
     PortControl4SP[DON].setState(sStatus ? ISS_ON : ISS_OFF);
     PortControl4SP[DOFF].setState(sStatus ? ISS_OFF : ISS_ON);
     PortControl4SP.apply();
 
     if(!DLIsw::switchStatus(OUT5, sStatus))
-        LOG_ERROR("Problem getting status");
+        DEBUG(INDI::Logger::DBG_ERROR, "Problem getting status");
     PortControl5SP[DON].setState(sStatus ? ISS_ON : ISS_OFF);
     PortControl5SP[DOFF].setState(sStatus ? ISS_OFF : ISS_ON);
     PortControl5SP.apply();
 
     if(!DLIsw::switchStatus(OUT6, sStatus))
-        LOG_ERROR("Problem getting status");
+        DEBUG(INDI::Logger::DBG_ERROR, "Problem getting status");
     PortControl6SP[DON].setState(sStatus ? ISS_ON : ISS_OFF);
     PortControl6SP[DOFF].setState(sStatus ? ISS_OFF : ISS_ON);
     PortControl6SP.apply();
 
     if(!DLIsw::switchStatus(OUT7, sStatus))
-        LOG_ERROR("Problem getting status");
+        DEBUG(INDI::Logger::DBG_ERROR, "Problem getting status");
     PortControl7SP[DON].setState(sStatus ? ISS_ON : ISS_OFF);
     PortControl7SP[DOFF].setState(sStatus ? ISS_OFF : ISS_ON);
     PortControl7SP.apply();
 
     if(!DLIsw::switchStatus(OUT8, sStatus))
-        LOG_ERROR("Problem getting status");
+        DEBUG(INDI::Logger::DBG_ERROR, "Problem getting status");
     PortControl8SP[DON].setState(sStatus ? ISS_ON : ISS_OFF);
     PortControl8SP[DOFF].setState(sStatus ? ISS_OFF : ISS_ON);
     PortControl8SP.apply();
@@ -730,14 +741,12 @@ bool DLIsw::testConfig() {
     if ((strcmp(AuthsTP[User].getText(), "NotSet") == 0) ||
             (strcmp(AuthsTP[Auth].getText(), "NotSet") == 0) ||
             (strcmp(AuthsTP[HostNm].getText(), "NotSet") == 0)) {
-        LOG_ERROR("You need to set the autherazations under the 'Options' tab!");
         return false;
     }
 
     // test if Digiswitch answers back
     string version;
     if(!switchVersion(version)) {
-        LOG_ERROR("Problem with authentication:  reset the auth fields under the 'Options' tab.");
         return false;
     }
 
@@ -774,7 +783,7 @@ bool DLIsw::switchVersion(string &version)
         textConditioning(version);
         return true;
     }
-    LOG_ERROR("Problem getting DLI version");
+    DEBUG(INDI::Logger::DBG_ERROR, "Problem getting DLI version");
     return false;
 }
 
@@ -792,14 +801,14 @@ bool DLIsw::switchControl(int port, int control)
         return false;
 
     snprintf(URL, 100, "http://%s:%s@%s/restapi/relay/outlets/=%i/state/", AuthsTP[User].getText(), AuthsTP[Auth].getText(), AuthsTP[HostNm].getText(), port);
-    LOGF_DEBUG("Set URL: %s", URL);
+    DEBUGF(INDI::Logger::DBG_DEBUG, "Set URL: %s", URL);
 
     if (control == DOFF)
         data = "value=false";
     else if (control == DON)
         data = "value=true";
     else {
-        LOG_ERROR("Control must be either on or off");
+        DEBUG(INDI::Logger::DBG_ERROR, "Control must be either on or off");
         return false;
     }
 
@@ -817,14 +826,12 @@ bool DLIsw::switchControl(int port, int control)
 
         res = curl_easy_perform(curl);
         curl_easy_cleanup(curl);
-        if (res) {
-            LOGF_ERROR("CURL error, result from curl: %i\n", res);
-            LOGF_ERROR("CURL returned: %s\n", readBuffer.c_str());
+        if (res)
             return false;
-        }
+
         return true;
     }
-    LOG_ERROR("Problem controlling port");
+    DEBUG(INDI::Logger::DBG_ERROR, "Problem controlling port");
     return false;
 }
 
@@ -843,7 +850,7 @@ bool DLIsw::switchCycle(int port)
         return false;
 
     snprintf(URL, 100, "http://%s:%s@%s/restapi/relay/outlets/=%i/cycle/", AuthsTP[User].getText(), AuthsTP[Auth].getText(), AuthsTP[HostNm].getText(), port);
-    LOGF_DEBUG("Cycle URL: %s", URL);
+    DEBUGF(INDI::Logger::DBG_DEBUG, "Cycle URL: %s", URL);
 
     list = curl_slist_append(list, "X-CSRF: x");
 
@@ -859,14 +866,12 @@ bool DLIsw::switchCycle(int port)
 
         res = curl_easy_perform(curl);
         curl_easy_cleanup(curl);
-        if (res) {
-            LOGF_ERROR("CURL error, result from curl: %i\n", res);
-            LOGF_ERROR("CURL returned: %s\n", readBuffer.c_str());
+        if (res)
             return false;
-        }
+
         return true;
     }
-    LOG_ERROR("Problem cycling port");
+    DEBUG(INDI::Logger::DBG_ERROR, "Problem cycling port");
     return false;
 }
 
@@ -892,24 +897,21 @@ bool DLIsw::switchStatus(int port, bool &sStatus)
 
         res = curl_easy_perform(curl);
         curl_easy_cleanup(curl);
-        if (res) {
-            LOGF_ERROR("CURL error, result from curl: %i\n", res);
-            LOGF_ERROR("CURL returned: %s\n", readBuffer.c_str());
+        if (res)
             return false;
-        }
 
         if(readBuffer == "[true]") {
-            LOGF_DEBUG("CURL result for %i is: on", port);
+            DEBUGF(INDI::Logger::DBG_DEBUG, "CURL result for %i is: on", port);
             sStatus = true;
             return true;
         }
         else if(readBuffer == "[false]") {
-            LOGF_DEBUG("CURL result for %i is: off", port);
+            DEBUGF(INDI::Logger::DBG_DEBUG, "CURL result for %i is: off", port);
             sStatus = false;
             return true;
         }
     }
-    LOG_ERROR("Error reading status");
+    DEBUG(INDI::Logger::DBG_ERROR, "Error reading status");
     return false;
 }
 
@@ -925,7 +927,7 @@ bool DLIsw::switchGetName(int port, string &pName)
         return false;
 
     snprintf(URL, 100, "http://%s:%s@%s/restapi/relay/outlets/=%i/name/", AuthsTP[User].getText(), AuthsTP[Auth].getText(), AuthsTP[HostNm].getText(), port);
-    LOGF_DEBUG("CURL cmd:  %s", URL);
+    DEBUGF(INDI::Logger::DBG_DEBUG, "CURL cmd:  %s", URL);
 
     curl = curl_easy_init();
     if(curl) {
@@ -936,15 +938,13 @@ bool DLIsw::switchGetName(int port, string &pName)
 
         res = curl_easy_perform(curl);
         curl_easy_cleanup(curl);
-        if (res) {
-            LOGF_ERROR("CURL error, result from curl: %i\n", res);
-            LOGF_ERROR("CURL returned: %s\n", pName.c_str());
+        if (res)
             return false;
-        }
+
         textConditioning(pName);
         return true;
     }
-    LOG_ERROR("Error reading port names");
+    DEBUG(INDI::Logger::DBG_ERROR, "Error reading port names");
     return false;
 }
 
@@ -963,16 +963,16 @@ bool DLIsw::switchSetNames()
             return false;
 
         snprintf(URL, 100, "http://%s:%s@%s/restapi/relay/outlets/%i/name/", AuthsTP[User].getText(), AuthsTP[Auth].getText(), AuthsTP[HostNm].getText(), i);
-        LOGF_DEBUG("Set URL: %s", URL);
+        DEBUGF(INDI::Logger::DBG_DEBUG, "Set URL: %s", URL);
 
         snprintf(pName, 50, "value=%s", PortLabelsTP[i].getText());
-        LOGF_DEBUG("Setting port %i name to: %s, URL: %s", i, pName, URL);
+        DEBUGF(INDI::Logger::DBG_DEBUG, "Setting port %i name to: %s, URL: %s", i, pName, URL);
 
         list = curl_slist_append(list, "X-CSRF: x");
 
         curl = curl_easy_init();
         if(!curl) {
-            LOG_ERROR("Problem setting port name");
+            DEBUG(INDI::Logger::DBG_ERROR, "Problem setting port name");
             return false;
         }
         curl_easy_setopt(curl, CURLOPT_HTTPAUTH, (long)CURLAUTH_ANY);
@@ -985,11 +985,8 @@ bool DLIsw::switchSetNames()
 
         res = curl_easy_perform(curl);
         curl_easy_cleanup(curl);
-        if (res) {
-            LOGF_ERROR("CURL error, result from curl: %i\n", res);
-            LOGF_ERROR("CURL returned: %s\n", readBuffer.c_str());
+        if (res)
             return false;
-        }
     }
     //deleteProperty(PortLabelsTP.getName());
     //defineText(&PortLabelsTP);
