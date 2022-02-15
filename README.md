@@ -1,7 +1,6 @@
 # DLI Digiswitch
 INDI DLI switch driver
 
-
 DLI Digiswitch INDI Driver
 =========================================
 This package provides the INDI driver for DLI's Digiswitch (Web Switch Pro):
@@ -13,33 +12,17 @@ This package provides the INDI driver for DLI's Digiswitch (Web Switch Pro):
 
 The DLI Digiswitch driver is compatible with libindi >= v1.8.2
 
-Setup the Digiswitch
-====================
-
-- Log into the Digiswitch and set:
-  - 'Setup': fill out 'LAN Configuration and General Network Settings'
-  - 'Setup': fill out 'Administrator credentials'
-  - 'Setup/Access':  check 'Allow legacy state-changing GET requests'
-  - 'External APIs': check 'Allow REST-style API'
-  - 'External APIs/UPnP outlet binding configuration': check all the ports you want this driver to control
-
-- Optionally:
-  - 'Setup/Power Loss Recovery Mode': set the recovery mode
-  - 'Setup/Unit Names': set the ports names (this can be changed in this driver)
-  - 'Setup/Delay': set the cycle delay time (this can be changed in this driver)
-
-*Read the Release Notes*
-
-INSTALL
-=======
-- Reference the INSTALL document.
-
 FEATURES
 ========
 - Control the power (on/off) for the 8 ports
 - Cycle the power of a port (if it's turned on)
 - (Re)Name ports
 - Power everything on or off
+- Set the cycle delay time
+
+INSTALL
+=======
+- Reference the INSTALL document.
 
 How to Use
 ==========
@@ -59,11 +42,26 @@ If you're using KStars, the drivers will be automatically listed in KStars' Devi
 Before you Start
 ================
 
+- Setup the Digiswitch
+
+  - Log into the Digiswitch and set:
+    - 'Setup': fill out 'LAN Configuration and General Network Settings'
+    - 'Setup': fill out 'Administrator credentials'
+    - 'Setup/Access':  check 'Allow legacy state-changing GET requests'
+    - 'External APIs': check 'Allow REST-style API'
+    - 'External APIs/UPnP outlet binding configuration': check all the ports you want this driver to control
+
+  - Optionally:
+    - 'Setup/Power Loss Recovery Mode': set the recovery mode
+    - 'Setup/Unit Names': set the ports names (this can be changed in this driver)
+    - 'Setup/Delay': set the cycle delay time (this can be changed in this driver)
+
 - Set the authentication parameters (user, password, hostname) under the 'Options' tab
-  - These need to match what you setup in the DLI switch
   - After authentication, click on 'Connect' under the Main Tab
-- Once successfully authenticated to the DLI switch, you can set the port names
+- Once successfully authenticated to the DLI switch, you can (re)set the port names
 - There is a slight delay between setting a switch and the indicator light
+
+*Read the Release Notes*
 
 OPERATIONS
 ==========
@@ -88,6 +86,8 @@ Options Tab (Authenticated)
 After authenticating and connecting, the Options Tab will allow you to name/rename the ports.  This will rename them in the Digiswitch as well.
 
 When the driver is started, it will retrieve these names from the Digiswitch.
+
+Cycle Delay: this allows you to modify the Digiswitch's delay time for cycling a port
 
 
 Main Tab
