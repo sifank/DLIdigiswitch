@@ -1,3 +1,9 @@
+Version 0.6 20220215
+- Added setting cycle delay time
+- ISSUES:
+  - Auto connect after auth set
+  - Re-paint main tab switch names after name change
+
 Version 0.5 20220213
 - Fixed setting port name labels
 - ISSUES:
