@@ -17,6 +17,10 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+    TODO:
+    - after auth need to click connect (622)
+    - after name change need to disconnect/connect (597)
+
 */
 
 #include "dli_digiswitch.h"
@@ -52,7 +56,6 @@ bool DLIsw::Connect()
         DEBUGF(INDI::Logger::DBG_SESSION, "DLI switch version: %s", version.c_str());
 
         SetTimer(POLLMS);
-        string version;
         DEBUG(INDI::Logger::DBG_SESSION, "KOBS switches connected successfully.");
         return true;
     }
@@ -96,6 +99,10 @@ bool DLIsw::initProperties()
     PortLabelsTP[OUT7].fill("PORTLABEL7", "Port 7", "Port 7");
     PortLabelsTP[OUT8].fill("PORTLABEL8", "Port 8", "Port 8");
     PortLabelsTP.fill(getDeviceName(), "PORTLABELS", "Labels", OPTIONS_TAB, IP_WO, 60, IPS_IDLE);
+
+    // Cycle delay
+    CycleDelayNP[0].fill("CYCLEDELAY", "Delay (sec)", "%.1f", 0, 20, .5, 1);
+    CycleDelayNP.fill(getDeviceName(), "CycleDelay", "Cycle", OPTIONS_TAB, IP_RW, 60, IPS_OK);
 
     // DLI hostname or IP
     AuthsTP[User].fill("USER", "User name", "NotSet");
@@ -228,6 +235,7 @@ bool DLIsw::updateProperties()
         defineSwitch(&PortControl7SP);
         defineSwitch(&PortControl8SP);
         defineText(&PortLabelsTP);
+        defineNumber(&CycleDelayNP);
         defineText(&AuthsTP);
         defineSwitch(&AllSP);
     }
@@ -244,6 +252,7 @@ bool DLIsw::updateProperties()
         deleteProperty(PortControl7SP.getName());
         deleteProperty(PortControl8SP.getName());
         deleteProperty(PortLabelsTP.getName());
+        deleteProperty(CycleDelayNP.getName());
         deleteProperty(AllSP.getName());
         deleteProperty(AuthsTP.getName());
     }
@@ -576,11 +585,20 @@ bool DLIsw::ISNewText (const char *dev, const char *name, char *texts[], char *n
         if (PortLabelsTP.isNameMatch(name))
         {
             PortLabelsTP.update(texts, names, n);
-            if (!switchSetNames()) {
-                DEBUG(INDI::Logger::DBG_ERROR, "Problem setting names");
+
+            for (int i=0; i < POWER_N; i++) {
+                if (!switchSetName(i, PortLabelsTP[i].getText())) {
+                    DEBUG(INDI::Logger::DBG_ERROR, "Problem setting names");
+                }
             }
+
+            // TODO get this to automatically re-paint switch names on main tab
+            //INDI::DefaultDevice::updateProperties();   // Alert not working
+            DEBUG(INDI::Logger::DBG_WARNING, "You will need to Disconnect/Connect for name(s) to appear on the Main Tab");
+
             PortLabelsTP.setState(IPS_OK);
             PortLabelsTP.apply();
+
         }
 
         // Authentications
@@ -594,13 +612,14 @@ bool DLIsw::ISNewText (const char *dev, const char *name, char *texts[], char *n
                 AuthsTP.setState(IPS_ALERT);
                 AuthsTP.apply();
                 DEBUG(INDI::Logger::DBG_ERROR, "Authorization not accepted, try again");
+                saveConfig();
             }
             else {
                 saveConfig();
-                DEBUG(INDI::Logger::DBG_WARNING, "You need to click Connect on the Main Tab to continue");
+                DEBUG(INDI::Logger::DBG_WARNING, "Click Connect on the Main Tab to continue");
 
                 // auto Connect() not working
-                //INDI::DefaultDevice::Connect();
+                //:q;  // ALERT not working
 
                 // for security reasons, remove the auth fields if successful
                 deleteProperty(AuthsTP.getName());
@@ -609,6 +628,27 @@ bool DLIsw::ISNewText (const char *dev, const char *name, char *texts[], char *n
     }
     return INDI::DefaultDevice::ISNewText (dev, name, texts, names, n);
 }
+
+//////////////////////////////////////////////////////////////////////////////
+/// Number field updated
+//////////////////////////////////////////////////////////////////////////////
+bool DLIsw::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
+{
+    if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
+    {
+        if (CycleDelayNP.isNameMatch(name)) {
+            CycleDelayNP.update(values, names, n);
+            if (!switchSetDelay(CycleDelayNP[0].getValue()))
+                DEBUG(INDI::Logger::DBG_ERROR, "Problem setting cycle delay");
+            else
+                CycleDelayNP.apply();
+
+            return true;
+        }
+    }
+    return INDI::DefaultDevice::ISNewNumber(dev, name, values, names, n);
+}
+
 
 ///////////////////////////////////////////////////////////////
 //   Timer Hit
@@ -688,7 +728,15 @@ void DLIsw::TimerHit()
     PortControl8SP[DON].setState(sStatus ? ISS_ON : ISS_OFF);
     PortControl8SP[DOFF].setState(sStatus ? ISS_OFF : ISS_ON);
     PortControl8SP.apply();
-    
+
+    // update cycle delay
+    int cycleDelay = 0;
+    if (!switchGetCycleDelay(cycleDelay))
+        DEBUG(INDI::Logger::DBG_ERROR, "Problem getting cycle delay");
+    CycleDelayNP[0].setValue(cycleDelay);
+    CycleDelayNP.setState(IPS_OK);
+    CycleDelayNP.apply();
+
     // and tell INDI to do this again ...
     SetTimer(POLLMS);
     return;
@@ -700,6 +748,7 @@ void DLIsw::TimerHit()
 void DLIsw::ISGetProperties(const char *dev)
 {
     INDI::DefaultDevice::ISGetProperties(dev);
+    defineProperty(&AuthsTP);
     loadConfig(true, AuthsTP.getName());
 }
 
@@ -758,120 +807,19 @@ bool DLIsw::testConfig() {
     return true;
 }
 
+///////////////////////// READ Functions //////////////////////
 ///////////////////////////////////////////////////////////////
 // get switch version
 ///////////////////////////////////////////////////////////////
-bool DLIsw::switchVersion(string &version)
+bool DLIsw::switchVersion(string &curlRes)
 {
-    CURL *curl;
-    string readBuffer;
-
-    snprintf(URL, 100, "http://%s:%s@%s/restapi/config/=version/", AuthsTP[User].getText(), AuthsTP[Auth].getText(), AuthsTP[HostNm].getText());
-
-    curl = curl_easy_init();
-    if(curl) {
-        curl_easy_setopt(curl, CURLOPT_HTTPAUTH, (long)CURLAUTH_ANY);
-        curl_easy_setopt(curl, CURLOPT_URL, URL);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &version);
-
-        res = curl_easy_perform(curl);
-        curl_easy_cleanup(curl);
-        if (res)
-            return false;
-
-        textConditioning(version);
+    char curlCmd[100];
+    snprintf(curlCmd, 100, "http://%s:%s@%s/restapi/config/=version/", AuthsTP[User].getText(), AuthsTP[Auth].getText(), AuthsTP[HostNm].getText());
+    if (curlRead(curlCmd, curlRes)) {
+        textConditioning(curlRes);
+        DEBUGF(INDI::Logger::DBG_SESSION, "DLI switch version: %s", curlRes.c_str());
         return true;
     }
-    DEBUG(INDI::Logger::DBG_ERROR, "Problem getting DLI version");
-    return false;
-}
-
-///////////////////////////////////////////////////////////////
-//   control switch (on/off)
-///////////////////////////////////////////////////////////////
-bool DLIsw::switchControl(int port, int control)
-{
-    CURL *curl;
-    string readBuffer;
-    string data = "value=true";
-    struct curl_slist *list = NULL;
-
-    if(!testConfig())
-        return false;
-
-    snprintf(URL, 100, "http://%s:%s@%s/restapi/relay/outlets/=%i/state/", AuthsTP[User].getText(), AuthsTP[Auth].getText(), AuthsTP[HostNm].getText(), port);
-    DEBUGF(INDI::Logger::DBG_DEBUG, "Set URL: %s", URL);
-
-    if (control == DOFF)
-        data = "value=false";
-    else if (control == DON)
-        data = "value=true";
-    else {
-        DEBUG(INDI::Logger::DBG_ERROR, "Control must be either on or off");
-        return false;
-    }
-
-    list = curl_slist_append(list, "X-CSRF: x");
-
-    curl = curl_easy_init();
-    if(curl) {
-        curl_easy_setopt(curl, CURLOPT_HTTPAUTH, (long)CURLAUTH_ANY);
-        curl_easy_setopt(curl, CURLOPT_URL, URL);
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
-        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
-
-        res = curl_easy_perform(curl);
-        curl_easy_cleanup(curl);
-        if (res)
-            return false;
-
-        return true;
-    }
-    DEBUG(INDI::Logger::DBG_ERROR, "Problem controlling port");
-    return false;
-}
-
-///////////////////////////////////////////////////////////////
-//   cycle switch (works only if on)
-///////////////////////////////////////////////////////////////
-bool DLIsw::switchCycle(int port)
-{
-    CURL *curl;
-    string readBuffer;
-    string data = "";
-
-    struct curl_slist *list = NULL;
-
-    if(!testConfig())
-        return false;
-
-    snprintf(URL, 100, "http://%s:%s@%s/restapi/relay/outlets/=%i/cycle/", AuthsTP[User].getText(), AuthsTP[Auth].getText(), AuthsTP[HostNm].getText(), port);
-    DEBUGF(INDI::Logger::DBG_DEBUG, "Cycle URL: %s", URL);
-
-    list = curl_slist_append(list, "X-CSRF: x");
-
-    curl = curl_easy_init();
-    if(curl) {
-        curl_easy_setopt(curl, CURLOPT_HTTPAUTH, (long)CURLAUTH_ANY);
-        curl_easy_setopt(curl, CURLOPT_URL, URL);
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
-        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
-        //curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
-
-        res = curl_easy_perform(curl);
-        curl_easy_cleanup(curl);
-        if (res)
-            return false;
-
-        return true;
-    }
-    DEBUG(INDI::Logger::DBG_ERROR, "Problem cycling port");
     return false;
 }
 
@@ -880,38 +828,22 @@ bool DLIsw::switchCycle(int port)
 ///////////////////////////////////////////////////////////////
 bool DLIsw::switchStatus(int port, bool &sStatus)
 {
-    CURL *curl;
-    string readBuffer;
-
     if(!testConfig())
         return false;
 
-    snprintf(URL, 100, "http://%s:%s@%s/restapi/relay/outlets/=%i/state/", AuthsTP[User].getText(), AuthsTP[Auth].getText(), AuthsTP[HostNm].getText(), port);
-
-    curl = curl_easy_init();
-    if(curl) {
-        curl_easy_setopt(curl, CURLOPT_HTTPAUTH, (long)CURLAUTH_ANY);
-        curl_easy_setopt(curl, CURLOPT_URL, URL);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
-
-        res = curl_easy_perform(curl);
-        curl_easy_cleanup(curl);
-        if (res)
-            return false;
-
-        if(readBuffer == "[true]") {
-            DEBUGF(INDI::Logger::DBG_DEBUG, "CURL result for %i is: on", port);
+    string curlRes;
+    char curlCmd[100];
+    snprintf(curlCmd, 100, "http://%s:%s@%s/restapi/relay/outlets/=%i/state/", AuthsTP[User].getText(), AuthsTP[Auth].getText(), AuthsTP[HostNm].getText(), port);
+    if (curlRead(curlCmd, curlRes)) {
+        if(strcmp(curlRes.c_str(), "[true]") == 0) {
             sStatus = true;
             return true;
         }
-        else if(readBuffer == "[false]") {
-            DEBUGF(INDI::Logger::DBG_DEBUG, "CURL result for %i is: off", port);
+        else if(strcmp(curlRes.c_str(), "[false]") ==0) {
             sStatus = false;
             return true;
         }
     }
-    DEBUG(INDI::Logger::DBG_ERROR, "Error reading status");
     return false;
 }
 
@@ -920,77 +852,197 @@ bool DLIsw::switchStatus(int port, bool &sStatus)
 ///////////////////////////////////////////////////////////////
 bool DLIsw::switchGetName(int port, string &pName)
 {
-    CURL *curl;
-
-    // get out of here if auth is not set yet
     if(!testConfig())
         return false;
 
-    snprintf(URL, 100, "http://%s:%s@%s/restapi/relay/outlets/=%i/name/", AuthsTP[User].getText(), AuthsTP[Auth].getText(), AuthsTP[HostNm].getText(), port);
-    DEBUGF(INDI::Logger::DBG_DEBUG, "CURL cmd:  %s", URL);
-
-    curl = curl_easy_init();
-    if(curl) {
-        curl_easy_setopt(curl, CURLOPT_HTTPAUTH, (long)CURLAUTH_ANY);
-        curl_easy_setopt(curl, CURLOPT_URL, URL);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &pName);
-
-        res = curl_easy_perform(curl);
-        curl_easy_cleanup(curl);
-        if (res)
-            return false;
-
+    string curlRes;
+    char curlCmd[100];
+    snprintf(curlCmd, 100, "http://%s:%s@%s/restapi/relay/outlets/=%i/name/", AuthsTP[User].getText(), AuthsTP[Auth].getText(), AuthsTP[HostNm].getText(), port);
+    if (curlRead(curlCmd, pName)) {
         textConditioning(pName);
         return true;
     }
-    DEBUG(INDI::Logger::DBG_ERROR, "Error reading port names");
     return false;
 }
 
 ///////////////////////////////////////////////////////////////
-//   set all port names
+// get cycle delay
 ///////////////////////////////////////////////////////////////
-bool DLIsw::switchSetNames()
+bool DLIsw::switchGetCycleDelay(int &cycleDelay)
 {
-    for (int i=0; i < POWER_N; i++) {
-        CURL *curl;
-        string readBuffer;
-        char pName[50];
-        struct curl_slist *list = NULL;
+    if(!testConfig())
+        return false;
 
-        if(!testConfig())
-            return false;
-
-        snprintf(URL, 100, "http://%s:%s@%s/restapi/relay/outlets/%i/name/", AuthsTP[User].getText(), AuthsTP[Auth].getText(), AuthsTP[HostNm].getText(), i);
-        DEBUGF(INDI::Logger::DBG_DEBUG, "Set URL: %s", URL);
-
-        snprintf(pName, 50, "value=%s", PortLabelsTP[i].getText());
-        DEBUGF(INDI::Logger::DBG_DEBUG, "Setting port %i name to: %s, URL: %s", i, pName, URL);
-
-        list = curl_slist_append(list, "X-CSRF: x");
-
-        curl = curl_easy_init();
-        if(!curl) {
-            DEBUG(INDI::Logger::DBG_ERROR, "Problem setting port name");
+    string curlRes;
+    char curlCmd[100];
+    snprintf(curlCmd, 100, "http://%s:%s@%s/restapi/relay/cycle_delay/", AuthsTP[User].getText(), AuthsTP[Auth].getText(), AuthsTP[HostNm].getText());
+    if (curlRead(curlCmd, curlRes)) {
+        textConditioning(curlRes);
+        try {
+            cycleDelay = stoi(curlRes);
+            return true;
+        }
+        catch (...) {
             return false;
         }
+    }
+
+    return false;
+}
+
+/// ///////////////////////////////////////////////////////////////
+// curl read
+///////////////////////////////////////////////////////////////
+bool DLIsw::curlRead(char* curlCmd, string &curlRes)
+    {
+    CURL *curl;
+    curl = curl_easy_init();
+    if(curl) {
         curl_easy_setopt(curl, CURLOPT_HTTPAUTH, (long)CURLAUTH_ANY);
-        curl_easy_setopt(curl, CURLOPT_URL, URL);
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
-        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, pName);
+        curl_easy_setopt(curl, CURLOPT_URL, curlCmd);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &curlRes);
 
         res = curl_easy_perform(curl);
         curl_easy_cleanup(curl);
-        if (res)
+        if (res) {
+            DEBUGF(INDI::Logger::DBG_ERROR, "Curl problem, returned code: %i  message %s", res, curlRes.c_str());
             return false;
+        }
+
+        if (curlRes.find("ERROR") == string::npos) {
+            return false;
+        }
+
+        return true;
     }
-    //deleteProperty(PortLabelsTP.getName());
-    //defineText(&PortLabelsTP);
-    PortLabelsTP.setState(IPS_OK);
-    PortLabelsTP.apply();
+    return false;
+}
+
+///////////////////////// WRITE functions /////////////////////
+///////////////////////////////////////////////////////////////
+//   control switch (on/off)
+///////////////////////////////////////////////////////////////
+bool DLIsw::switchControl(int port, int control)
+{
+    if(!testConfig())
+        return false;
+
+    string data = "value=true";
+    char curlCmd[100];
+    snprintf(curlCmd, 100, "http://%s:%s@%s/restapi/relay/outlets/%i/state/", AuthsTP[User].getText(), AuthsTP[Auth].getText(), AuthsTP[HostNm].getText(), port);
+
+    if (control == DOFF)
+        data = "value=false";
+    else if (control == DON)
+        data = "value=true";
+
+    if (curlWrite(curlCmd, data))
+        return true;
+
+    return false;
+}
+
+///////////////////////////////////////////////////////////////
+//   cycle switch (works only if on)
+///////////////////////////////////////////////////////////////
+bool DLIsw::switchCycle(int port)
+{
+    if(!testConfig())
+        return false;
+
+    string data = "cycle";
+    char curlCmd[100];
+    snprintf(curlCmd, 100, "http://%s:%s@%s/restapi/relay/outlets/%i/cycle/", AuthsTP[User].getText(), AuthsTP[Auth].getText(), AuthsTP[HostNm].getText(), port);
+    if (curlWrite(curlCmd, data))
+        return true;
+
+    return false;
+}
+
+
+///////////////////////////////////////////////////////////////
+//   set port name
+///////////////////////////////////////////////////////////////
+bool DLIsw::switchSetName(int port, const char* pName)
+{
+    if(!testConfig())
+        return false;
+
+    char data[50];
+    char curlCmd[100];
+    snprintf(curlCmd, 100, "http://%s:%s@%s/restapi/relay/outlets/%i/name/", AuthsTP[User].getText(), AuthsTP[Auth].getText(), AuthsTP[HostNm].getText(), port);
+    snprintf(data, 50, "value=%s", pName);
+    string sdata(data);
+
+    if (curlWrite(curlCmd, sdata))
+        return true;
+
+    return false;
+}
+
+///////////////////////////////////////////////////////////////
+//   set cycle delay
+///////////////////////////////////////////////////////////////
+bool DLIsw::switchSetDelay(float delay)
+{
+    if(!testConfig())
+        return false;
+
+    char data[50];
+    char curlCmd[100];
+    snprintf(curlCmd, 100, "http://%s:%s@%s/restapi/relay/cycle_delay/", AuthsTP[User].getText(), AuthsTP[Auth].getText(), AuthsTP[HostNm].getText());
+    snprintf(data, 50, "value=%0.1f", delay);
+    string sdata(data);
+
+    if (curlWrite(curlCmd, sdata))
+        return true;
+
+    return false;
+}
+
+///////////////////////////////////////////////////////////////
+//   curl write
+///////////////////////////////////////////////////////////////
+bool DLIsw::curlWrite(char* curlCmd, string &data)
+{
+    CURL *curl;
+    string readBuffer;
+    struct curl_slist *list = NULL;
+
+    list = curl_slist_append(list, "X-CSRF: x");
+    curl = curl_easy_init();
+    if(!curl) {
+        DEBUG(INDI::Logger::DBG_ERROR, "Curl issue");
+        return false;
+    }
+    curl_easy_setopt(curl, CURLOPT_HTTPAUTH, (long)CURLAUTH_ANY);
+    curl_easy_setopt(curl, CURLOPT_URL, curlCmd);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
+
+    // if cycle, then POST and no data
+    if (strcmp(data.c_str(), "cycle") == 0) {
+        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "POST");
+    }
+    else {
+        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
+    }
+
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+
+    res = curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
+
+    if (res) {
+        DEBUGF(INDI::Logger::DBG_ERROR, "Curl problem, returned code: %i  message %s", res, readBuffer.c_str());
+        return false;
+    }
+
+    if (readBuffer.find("ERROR") == string::npos) {
+        return false;
+    }
+
     return true;
 }

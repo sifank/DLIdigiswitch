@@ -19,7 +19,7 @@ find_package(GSL REQUIRED)
 
 # these will be used to set the version number in config.h and our driver's xml file
 set(DLI_VERSION_MAJOR 0)
-set(DLI_VERSION_MINOR 4)
+set(DLI_VERSION_MINOR 6)
 
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/VERSION.cmake

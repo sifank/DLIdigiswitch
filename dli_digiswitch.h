@@ -36,6 +36,7 @@ public:
     virtual const char *getDefaultName() override;
     virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
     virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
+    virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
     virtual void ISGetProperties(const char *dev) override;
     virtual bool updateProperties() override;
     virtual void TimerHit() override;
@@ -53,10 +54,13 @@ private:
     bool switchControl(int port, int control);
     bool switchCycle(int port);
     bool switchGetName(int port, string &pName);
-    bool switchSetNames();
+    bool switchSetName(int port, const char* pName);
     void textConditioning(string &pName);
     void paintPortSwitches();
-    
+    bool curlRead(char* curlCmd, string &curRes);
+    bool curlWrite(char* curlCmd, string &data);
+    bool switchGetCycleDelay(int &cycleDelay);
+    bool switchSetDelay(float delay);
     enum
     {
         DON,
@@ -99,9 +103,9 @@ private:
         Auths_N,
     };
     INDI::PropertyText AuthsTP {Auths_N};
+    INDI::PropertyNumber CycleDelayNP{1};
     
     char portLabel[MAXINDILABEL];
-    char URL[100];
     CURLcode res;
     bool portChanged=false;
 };
