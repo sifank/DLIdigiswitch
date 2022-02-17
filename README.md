@@ -53,6 +53,7 @@ Before you Start
 
   - Optionally:
     - 'Setup/Power Loss Recovery Mode': set the recovery mode
+    - 'Setup/Wrong Password Lockout': set the minutes you need to wait before attempting another login (default=5 mins)
     - 'Setup/Unit Names': set the ports names (this can be changed in this driver)
     - 'Setup/Delay': set the cycle delay time (this can be changed in this driver)
 
@@ -86,6 +87,8 @@ Options Tab (Authenticated)
 After authenticating and connecting, the Options Tab will allow you to name/rename the ports.  This will rename them in the Digiswitch as well.
 
 When the driver is started, it will retrieve these names from the Digiswitch.
+
+If you fail to login after a number of times (3?), a 'wrong password lockout' will occur (5 mins default).  The time can be changed in the Digiswitch (see optional setup above).
 
 Cycle Delay: this allows you to modify the Digiswitch's delay time for cycling a port
 
