@@ -53,7 +53,7 @@ Before you Start
 
   - Optionally:
     - 'Setup/Power Loss Recovery Mode': set the recovery mode
-    - 'Setup/Wrong Password Lockout': set the minutes you need to wait before attempting another login (default=5 mins)
+    - 'Setup/Delay': Wrong Password Lockout sets the minutes you need to wait before attempting another login (default=5 mins)
     - 'Setup/Unit Names': set the ports names (this can be changed in this driver)
     - 'Setup/Delay': set the cycle delay time (this can be changed in this driver)
 
