@@ -60,8 +60,12 @@ bool DLIsw::Connect()
         return true;
     }
     else {
+        if (version.find("lockout") != string::npos)
+                DEBUG(INDI::Logger::DBG_WARNING, "Security Lockout - try again in 5 (defalut) minutes");
+        else
+                DEBUG(INDI::Logger::DBG_WARNING, "Not authenticated, see Options Tab");
+
         defineText(&AuthsTP);
-        DEBUG(INDI::Logger::DBG_WARNING, "Not authenticated, see Options Tab");
         return false;
     }
 }
@@ -605,24 +609,19 @@ bool DLIsw::ISNewText (const char *dev, const char *name, char *texts[], char *n
         if (AuthsTP.isNameMatch(name))
         {
             AuthsTP.update(texts, names, n);
-            AuthsTP.setState(IPS_OK);
-            AuthsTP.apply();
-
             if (!testConfig()) {
                 AuthsTP.setState(IPS_ALERT);
                 AuthsTP.apply();
-                DEBUG(INDI::Logger::DBG_ERROR, "Authorization not accepted, try again");
-                saveConfig();
+                DEBUG(INDI::Logger::DBG_ERROR, "Authentication not accepted, try again");
             }
             else {
+                AuthsTP.setState(IPS_OK);
+                AuthsTP.apply();
                 saveConfig();
                 DEBUG(INDI::Logger::DBG_WARNING, "Click Connect on the Main Tab to continue");
 
-                // auto Connect() not working
-                //:q;  // ALERT not working
-
-                // for security reasons, remove the auth fields if successful
-                deleteProperty(AuthsTP.getName());
+                // TODO get this to automatically connect if auth'd
+                //INDI::DefaultDevice::Connect() // ALERT not working
             }
         }
     }
@@ -782,6 +781,7 @@ void DLIsw::textConditioning(string &pName)
     pName.erase(std::remove(pName.begin(), pName.end(), '"'), pName.end());
 }
 
+
 ///////////////////////////////////////////////////////////////
 //   Test if configured
 ///////////////////////////////////////////////////////////////
@@ -799,9 +799,6 @@ bool DLIsw::testConfig() {
         return false;
     }
 
-    VersionTP[0].setText(version);
-    VersionTP.apply();
-
     // for security reasons, remove the auth fields if successful
     deleteProperty(AuthsTP.getName());
     return true;
@@ -817,7 +814,6 @@ bool DLIsw::switchVersion(string &curlRes)
     snprintf(curlCmd, 100, "http://%s:%s@%s/restapi/config/=version/", AuthsTP[User].getText(), AuthsTP[Auth].getText(), AuthsTP[HostNm].getText());
     if (curlRead(curlCmd, curlRes)) {
         textConditioning(curlRes);
-        DEBUGF(INDI::Logger::DBG_SESSION, "DLI switch version: %s", curlRes.c_str());
         return true;
     }
     return false;
@@ -906,13 +902,13 @@ bool DLIsw::curlRead(char* curlCmd, string &curlRes)
         res = curl_easy_perform(curl);
         curl_easy_cleanup(curl);
         if (res) {
-            DEBUGF(INDI::Logger::DBG_ERROR, "Curl problem, returned code: %i  message %s", res, curlRes.c_str());
+            DEBUGF(INDI::Logger::DBG_DEBUG, "Curl problem, returned code: %i  message %s", res, curlRes.c_str());
             return false;
         }
 
-        if (curlRes.find("ERROR") == string::npos) {
+        if ((curlRes.find("ERROR") != string::npos) ||
+                (curlRes.find("error") != string::npos))
             return false;
-        }
 
         return true;
     }
@@ -1036,13 +1032,13 @@ bool DLIsw::curlWrite(char* curlCmd, string &data)
     curl_easy_cleanup(curl);
 
     if (res) {
-        DEBUGF(INDI::Logger::DBG_ERROR, "Curl problem, returned code: %i  message %s", res, readBuffer.c_str());
+        DEBUGF(INDI::Logger::DBG_DEBUG, "Curl problem, returned code: %i  message %s", res, readBuffer.c_str());
         return false;
     }
 
-    if (readBuffer.find("ERROR") == string::npos) {
+    if ((readBuffer.find("ERROR") != string::npos) ||
+            (readBuffer.find("error") != string::npos))
         return false;
-    }
 
     return true;
 }
