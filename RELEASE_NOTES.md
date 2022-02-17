@@ -1,3 +1,9 @@
+Version 0.7 20220216
+- Fixed issue with authenticating after a failed attempt
+- ISSUES:
+  - Auto connect after auth set
+  - Re-paint main tab switch names after name change
+
 Version 0.6 20220215
 - Added setting cycle delay time
 - ISSUES:
