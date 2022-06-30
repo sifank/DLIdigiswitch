@@ -17,22 +17,9 @@ INDI DLI digiswitch driver is released as a in source and binary packages. It is
 
 DEPENDENCIES:
 
-- sudo apt install build-essential devscripts debhelper fakeroot cdbs software-properties-common cmake pkg-config libmysqlclient-dev
+- sudo apt install build-essential devscripts debhelper fakeroot cdbs software-properties-common cmake pkg-config libmysqlclient-dev libcurl4-nss-dev
 - sudo add-apt-repository ppa:mutlaqja/ppa 
 - sudo apt install libindi-dev libnova-dev libz-dev libgsl-dev
-
-	
-Installation
-============
-
-In a working directory of your choosing:
-1) $ git clone https://github.com/sifank/DLIdigiswitch.git
-2) $ cd DLIdigiswitch
-3) $ mkdir build
-4) $ cd build
-5) $ cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ../
-6) $ make
-7) $ sudo make install
 
 Potential Build Issue
 =====================
@@ -48,6 +35,18 @@ To fix:
 4) $ sudo ln -s /usr/lib/x86_(replace from locate above)/libindidriver.so  libindidriver.so
    1) (example on my Raspberry Pi):  sudo ln -s /usr/lib/x86_64-linux-gnu/libindidriver.so  libindidriver.so)
 5) You can then rerun from the make step onwards
+
+Installation
+============
+
+In a working directory of your choosing:
+1) $ git clone https://github.com/sifank/DLIdigiswitch.git
+2) $ cd DLIdigiswitch
+3) $ mkdir build
+4) $ cd build
+5) $ cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ../
+6) $ make
+7) $ sudo make install
 
 That's it - you'll have the DLI Digiswitch driver listed in the Auxiliary section
 ... and you can remove the "build" folder.
